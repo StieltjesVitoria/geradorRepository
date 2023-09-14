@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<style>
+    textarea {
+        display: block;
+        resize: both;
+    }
+
+    h1 {
+        font-family: sans-serif;
+        text-align: center;
+    }
+
+    #gerador {
+        margin-top: 3em;
+        display: block;
+        border-radius: 1em;
+        background-color: rgb(52, 52, 255);
+        padding: 2em;
+    }
+</style>
+
+<script>
+    let valueSql = "";
+
+    function formatarParaJava(variaveis) {
+        const listaVariaveisFormatadas = [];
+        let umValor = false;
+        if (variaveis.includes('"')) {
+            variaveis = variaveis.replaceAll('"', '');
+        }
+        if (!Array.isArray(variaveis)) {
+            variaveis = variaveis.split(',');
+        }
+        if (variaveis.length == 1) {
+            variaveis.forEach(varivel => {
+                varivel = varivel.replace('\n', '');
+                if (varivel.startsWith(' ')) {
+                    varivel = varivel.replace(' ', '');
+                }
+                if (varivel.endsWith(' ')) {
+                    varivel = varivel.replace(' ', '');
+                }
+                varivel = `\n"${varivel} " +`;
+                listaVariaveisFormatadas.push(varivel);
+            });
+            const stringVariaveisFormatadas = listaVariaveisFormatadas.toString().replaceAll("+,", "+");
+            return stringVariaveisFormatadas;
+        }
+        variaveis.forEach(varivel => {
+            varivel = varivel.replace('\n', '');
+            if (varivel.startsWith(' ')) {
+                varivel = varivel.replace(' ', '');
+            }
+            varivel = `\n"${varivel}, " +`;
+            listaVariaveisFormatadas.push(varivel);
+        });
+
+        // Arrumar quando tiver UNION
+        listaVariaveisFormatadas[listaVariaveisFormatadas.length - 1] = listaVariaveisFormatadas[listaVariaveisFormatadas.length - 1].replace(",", "");
+        const stringVariaveisFormatadas = listaVariaveisFormatadas.toString().replaceAll("+,", "+");
+        return stringVariaveisFormatadas;
+    }
+
+    async function formatarSelect(sql) {
+        const e = 'Erro!';
+        if (sql.indexOf('SELECT') != 0) {
+            window.alert('Sql invalído deve começar com o termo SELECT');
+            return e;
+        }
+
+        const select = 6 + 1;
+        const from = sql.indexOf("FROM") - 2;
+        let where = 0;
+        let tabelas = "";
+        let variaveis = sql.substring(select, from);
+        let condicoes = "";
+
+        if (variaveis.length == 1) {
+            variaveis = '*';
+        }
+        if (variaveis.includes('DECODE')) {
+            window.alert('Remova os termos DECODE');
+            return e;
+        }
+
+        const variaveisFormatadasSQL = await formatarParaJava(variaveis);
+
+        if (sql.includes('WHERE')) {
+            where = sql.indexOf('WHERE');
+            tabelas = sql.substring(from + 7, where - 1);
+        }
+        else {
+            tabelas = sql.substring(from + 7, sql.length);
+        }
+
+        tabelas = await formatarParaJava(tabelas);
+
+        if (!where) {
+            tabelas = tabelas.substring(0, tabelas.length - 2);
+            const selectFormatado = `"SELECT " + ${variaveisFormatadasSQL}\n"FROM " +${tabelas}`;
+            return selectFormatado;
+        }
+
+        if (sql.endsWith(';')) {
+            condicoes = condicoes.substring(where, sql.length - 1);
+            condicoes = condicoes.split('\n');
+        }
+        else {
+            condicoes = sql.substring(where, sql.length);
+            condicoes = condicoes.split('\n');
+        }
+
+        condicoes = formatarParaJava(condicoes);
+        condicoes = condicoes.substring(0, condicoes.length - 2);
+
+        const selectFormatado = `"SELECT " + ${variaveisFormatadasSQL}\n"FROM " +${tabelas}${condicoes}`;
+        return selectFormatado;
+    }
+
+    async function formatarSql(sql) {
+        sql = sql.toLocaleUpperCase();
+        const e = 'Erro!';
+        if (sql.includes('--')) {
+            window.alert('Remova os comentártios do SQL');
+            return e;
+        }
+        if (sql.includes('UNION')) {
+            sql = sql.split('UNION');
+            const listaSelectsFormatados = [];
+            let index = 0;
+            for (let select of sql) {
+                if (select.includes('\nSELECT')) {
+                    select = select.replace('\nSELECT', 'SELECT');
+                }
+                if (select.includes(' ALL')) {
+                    select = select.replace(' ALL', '');
+                    listaSelectsFormatados[index - 1] =  listaSelectsFormatados[index - 1].replace('" "','"ALL"');
+                }
+                index = index + 1;
+                listaSelectsFormatados.push(await formatarSelect(select));
+            }
+            const alterarValor = '" ",';
+            const alterarValorALL = '"ALL",'
+            let stringSelects = listaSelectsFormatados.toString();
+            stringSelects = stringSelects.replaceAll(alterarValor, '"UNION " +\n');
+            stringSelects = stringSelects.replaceAll(alterarValorALL, '"UNION ALL " +\n');
+            const sqlFormatado = `@Query(value = ${stringSelects})`;
+            return sqlFormatado;
+        }
+        const select = await formatarSelect(sql);
+        const sqlFormatado = `@Query(value = ${select})`;
+        return sqlFormatado;
+    }
+
+    async function convertSql() {
+        if (!document.getElementById('Sql').value) return window.alert('Valor Inválido');
+        valueSql = document.getElementById('Sql').value;
+        valueSql = await formatarSql(valueSql);
+        console.log(valueSql);
+    }
+</script>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerador de Repository</title>
+</head>
+
+<body>
+    <h1>Gerador de Repository</h1>
+    <textarea id="Sql" placeholder="Insira o SQL aqui" name="valueSql" cols="60" rows="30"></textarea>
+    <input id="gerador" type="button" value="Gerar" onclick="convertSql()">
+    <label> Valor : </label>
+</body>
+
+</html>
