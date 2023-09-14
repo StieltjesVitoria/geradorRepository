@@ -12,6 +12,12 @@
         text-align: center;
     }
 
+    #container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
     #gerador {
         margin-top: 3em;
         display: block;
@@ -22,8 +28,6 @@
 </style>
 
 <script>
-    let valueSql = "";
-
     function formatarParaJava(variaveis) {
         const listaVariaveisFormatadas = [];
         let umValor = false;
@@ -57,7 +61,6 @@
             listaVariaveisFormatadas.push(varivel);
         });
 
-        // Arrumar quando tiver UNION
         listaVariaveisFormatadas[listaVariaveisFormatadas.length - 1] = listaVariaveisFormatadas[listaVariaveisFormatadas.length - 1].replace(",", "");
         const stringVariaveisFormatadas = listaVariaveisFormatadas.toString().replaceAll("+,", "+");
         return stringVariaveisFormatadas;
@@ -136,7 +139,7 @@
                 }
                 if (select.includes(' ALL')) {
                     select = select.replace(' ALL', '');
-                    listaSelectsFormatados[index - 1] =  listaSelectsFormatados[index - 1].replace('" "','"ALL"');
+                    listaSelectsFormatados[index - 1] = listaSelectsFormatados[index - 1].replace('" "', '"ALL"');
                 }
                 index = index + 1;
                 listaSelectsFormatados.push(await formatarSelect(select));
@@ -156,9 +159,12 @@
 
     async function convertSql() {
         if (!document.getElementById('Sql').value) return window.alert('Valor Inválido');
-        valueSql = document.getElementById('Sql').value;
-        valueSql = await formatarSql(valueSql);
-        console.log(valueSql);
+        const sqlFormatado = await formatarSql(document.getElementById('Sql').value)
+        if (sqlFormatado.includes('Erro!')) {
+            return window.alert("Erro ao converter SQL!");
+        }
+        document.getElementById('Sql').value = sqlFormatado;
+        return window.alert("Sql formatado com sucesso!")
     }
 </script>
 
@@ -169,10 +175,11 @@
 </head>
 
 <body>
-    <h1>Gerador de Repository</h1>
-    <textarea id="Sql" placeholder="Insira o SQL aqui" name="valueSql" cols="60" rows="30"></textarea>
-    <input id="gerador" type="button" value="Gerar" onclick="convertSql()">
-    <label> Valor : </label>
+    <div id="container">
+        <h1>Gerador de Repository</h1>
+        <textarea id="Sql" placeholder="Insira o SQL aqui" cols="60" rows="30"></textarea>
+        <input id="gerador" type="button" value="Gerar" onclick="convertSql()">
+    </div>
 </body>
 
 </html>
