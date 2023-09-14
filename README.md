@@ -1,2 +1,10 @@
-# geradorRepository
-Codigo na intenção de criar um gerador de repository para java springboot 8 ao inserir um SQL.
+
+# Gerador repository
+
+Código na intenção de gerar um forma mais rápida e uniforme de tranformar um SQL em uma repository no JAVA SPRINGBOOT.
+
+
+## Autor
+
+- [@StieltjesVitoria](https://www.github.com/StieltjesVitoria)
+
